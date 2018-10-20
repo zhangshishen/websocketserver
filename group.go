@@ -7,15 +7,25 @@ import (
 type ctx <-chan int
 type Group struct {
 	mu   sync.Mutex
-	conn map[*Connect]int
+	conn map[*Connect]bool
 }
 
 func (g *Group) addConn(c *Connect) {
 	//todo
-}
-func (g *Group) broadCast(m *Message, context ctx) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+
+	g.conn[c] = true
+}
+func (g *Group) broadCast(m *Message) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	for k, v := range g.conn {
+		if v {
+			k.Write(m)
+		}
+	}
 	//todo
 
 }

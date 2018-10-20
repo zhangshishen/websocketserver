@@ -26,6 +26,8 @@ type Connect struct {
 	group *Group
 	ws    *Websocket
 	id    string
+
+	ctx chan int
 	//write buffer and message buffer
 	wbuf      []byte
 	wbufIndex int
@@ -43,8 +45,21 @@ type Connect struct {
 	inQueue chan *Message
 }
 
+func (c *Connect) broadcastGroup(g string) int {
+	return 0
+}
+
+func (c *Connect) unicastID(id string) int {
+	return 0
+}
 func (c *Connect) Ping() int {
 	return 0
+}
+func (c *Connect) Write(m *Message) {
+	select {
+	case <-c.ctx:
+	case c.inQueue <- m:
+	}
 }
 func echoHandler(caller *Connect, m *Message) int {
 	fmt.Println("...echo")
@@ -52,8 +67,18 @@ func echoHandler(caller *Connect, m *Message) int {
 	r = append(r, m.head...)
 	r = append(r, m.data...)
 	m.data = r
-	fmt.Printf("length = %d\n", len(m.data))
-	caller.inQueue <- m
+	caller.Write(m)
+
+	return 1
+}
+
+func broadcastHandler(caller *Connect, m *Message) int {
+	fmt.Println("...echo")
+	r := make([]byte, 0)
+	r = append(r, m.head...)
+	r = append(r, m.data...)
+	m.data = r
+	caller.group.broadCast(m)
 
 	return 1
 }

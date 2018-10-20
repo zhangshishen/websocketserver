@@ -19,7 +19,8 @@ const (
 var keyGUID = []byte("258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
 
 type UpgradeHandler func(w http.ResponseWriter, r *http.Request)
-type broadcastHandler func(message []byte, group string) int
+
+//type broadcastHandler func(message []byte, group string) int
 type multicastHandler func(message []byte, multiGroup []string) int
 type unicastHandler func(message []byte, id string) int
 
@@ -33,7 +34,7 @@ type Websocket struct {
 	//queue
 
 	//callback
-	broadcastHandler
+	//broadcastHandler
 	unicastHandler
 }
 
@@ -53,35 +54,38 @@ func (w *Websocket) addConn(c *Connect, g string, id string) {
 	fmt.Println("#connect: create success ")
 	//create map between group and conn
 	group := w.group[g]
+	if group == nil {
+		group = new(Group)
+		group.conn = make(map[*Connect]bool)
+	}
 	c.group = group
 	group.addConn(c)
 	//create map between conn and ws
 	w.connMap[id] = c
 	//init var
-	c.wbufIndex = 0
-	c.mbufIndex = 0
+
+	c.ctx = make(chan int)
+
 	c.mh = echoHandler
 	c.ws = w
-	outQueue := make(chan *Message, 4096)
-	c.inQueue = make(chan *Message, 4096)
+	outQueue := make(chan *Message, 256)
+	c.inQueue = make(chan *Message, 256)
 	//reader goroutine
 	go readRoutine(c, outQueue)
 
 	for {
-		select {
-		case rmsg := <-outQueue:
-			if rmsg.op == connClosed {
-				fmt.Println("#connect: connect shut down ")
-				return
-			} else {
-				c.mh(c, rmsg)
-			}
-		case wmsg := <-c.inQueue:
 
-			n, _ := c.conn.Write(wmsg.data)
-			fmt.Printf("write %d byte\n", n)
-			//	break
+		wmsg := <-c.inQueue
+		if wmsg == nil {
+			//close connect
+			close(c.ctx)
+			return
 		}
+		n, _ := c.conn.Write(wmsg.data)
+		if n != len(wmsg.data) {
+			fmt.Printf("fatal error write %d byte\n", n)
+		}
+
 	}
 }
 
@@ -95,7 +99,6 @@ func readRoutine(c *Connect, outQueue chan *Message) {
 		n, err := c.conn.Read(c.wbuf)
 
 		if err != nil {
-			//
 			c.conn.Close()
 			close(bufc)
 			return

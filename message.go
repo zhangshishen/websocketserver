@@ -149,11 +149,13 @@ func fillMsg(bc chan []byte, mc chan<- *Message, c *Connect) {
 		m.data = append(m.data, buf[:clen]...)
 		buf = buf[clen:]
 		if m.fin == true {
-			mc <- m
+
 			for i := 0; i < len(m.data); i++ {
 				m.data[i] ^= m.maskingKey[i%4]
 			}
 			fmt.Println(string(m.data))
+			c.mh(c, m)
+
 			m = nil
 		}
 
