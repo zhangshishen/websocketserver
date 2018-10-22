@@ -8,7 +8,7 @@ import (
 )
 
 func upgradeHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("connection building")
+	fmt.Printf("start handshaking %d\n", icrementID)
 	conn, err := upgrade(w, r)
 	if err != "" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -27,6 +27,10 @@ func computeKey(s string) string {
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 }
 
+var (
+	icrementID = 1
+)
+
 func upgrade(w http.ResponseWriter, r *http.Request) (*Connect, string) {
 	if r.Method != "GET" {
 		return nil, "Method is not get"
@@ -38,7 +42,7 @@ func upgrade(w http.ResponseWriter, r *http.Request) (*Connect, string) {
 		return nil, "connection not upgrade"
 	}
 
-	fmt.Println("upgrade: Receive correct connection")
+	//fmt.Println("upgrade: Receive correct connection")
 	wkey := r.Header.Get("Sec-WebSocket-Key")
 	rkey := computeKey(wkey)
 
@@ -61,14 +65,15 @@ func upgrade(w http.ResponseWriter, r *http.Request) (*Connect, string) {
 	_, err = rwb.Write(p)
 	rwb.Flush()
 
-	//fmt.Println("send response correct")
+	fmt.Printf("%d handshake success\n", icrementID)
 
 	if err != nil {
 		return nil, "response failed"
 	}
 	conn := new(Connect)
 	conn.conn = c
-
+	conn.num = icrementID
+	icrementID++
 	conn.wbuf = make([]byte, BUFSIZE)
 	conn.mbuf = make([]byte, BUFSIZE)
 	return conn, ""

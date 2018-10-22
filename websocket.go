@@ -51,7 +51,7 @@ func (w *Websocket) addConn(c *Connect, g string, id string) {
 	if g == "" {
 		g = "Default"
 	}
-	fmt.Println("#connect: create success ")
+	//fmt.Println("#connect: create success ")
 	//create map between group and conn
 	group := w.group[g]
 	if group == nil {
@@ -61,7 +61,9 @@ func (w *Websocket) addConn(c *Connect, g string, id string) {
 	c.group = group
 	group.addConn(c)
 	//create map between conn and ws
+	w.mu.Lock()
 	w.connMap[id] = c
+	w.mu.Unlock()
 	//init var
 
 	c.ctx = make(chan int)
@@ -78,10 +80,21 @@ func (w *Websocket) addConn(c *Connect, g string, id string) {
 		wmsg := <-c.inQueue
 		if wmsg == nil {
 			//close connect
+			return
+		}
+
+		n, err := c.conn.Write(wmsg.data)
+
+		if err != nil { //passive close
 			close(c.ctx)
 			return
 		}
-		n, _ := c.conn.Write(wmsg.data)
+		if wmsg.op == connClosed { //adjective close
+			c.conn.Close()
+			close(c.ctx)
+			return
+		}
+
 		if n != len(wmsg.data) {
 			fmt.Printf("fatal error write %d byte\n", n)
 		}
@@ -137,7 +150,7 @@ func (w *Websocket) removeFromGroup(c *Connect, group string) {
 
 func (w *Websocket) listen(url string) {
 
-	fmt.Println("listening ...")
+	//fmt.Println("listening ...")
 	mux := http.DefaultServeMux
 	mux.HandleFunc("/", upgradeHandler)
 	log.Fatal(http.ListenAndServe(":8080", mux))

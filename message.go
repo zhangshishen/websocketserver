@@ -49,7 +49,6 @@ func fillMsg(bc chan []byte, mc chan<- *Message, c *Connect) {
 	err := true
 	var m *Message
 
-	defer fmt.Println("#msg: fill end")
 	for {
 		//head := 0
 		if m == nil {
@@ -67,7 +66,7 @@ func fillMsg(bc chan []byte, mc chan<- *Message, c *Connect) {
 		m.head = append(m.head, buf[0])
 		if op == 0x8 {
 			m.op = connClosed
-			c.conn.Close()
+			//c.conn.Close()
 		}
 		buf = buf[1:]
 
@@ -85,6 +84,7 @@ func fillMsg(bc chan []byte, mc chan<- *Message, c *Connect) {
 		m.head = append(m.head, buf[0]&0x7f)
 		buf = buf[1:]
 		if mask == 0 {
+			fmt.Println("mask is zero")
 			c.conn.Close()
 			return
 		}
@@ -139,6 +139,7 @@ func fillMsg(bc chan []byte, mc chan<- *Message, c *Connect) {
 		m.maskingKey = t
 		//fmt.Println("#msg: m.length = %d, buflen = %d,datalen = %d", m.length, len(buf), len(m.data))
 		for len(buf) < int(m.length)-len(m.data) {
+			//fmt.Println("fragment")
 			m.data = append(m.data, buf...)
 			buf = <-bc
 			if len(buf) == 0 {
@@ -153,9 +154,16 @@ func fillMsg(bc chan []byte, mc chan<- *Message, c *Connect) {
 			for i := 0; i < len(m.data); i++ {
 				m.data[i] ^= m.maskingKey[i%4]
 			}
-			fmt.Println(string(m.data))
+
 			c.mh(c, m)
 
+			if m.op == connClosed { //close tag
+				tmp := new(Message)
+				tmp.data = make([]byte, 2)
+				copy(tmp.data, m.data)
+				c.Write(tmp)
+
+			}
 			m = nil
 		}
 

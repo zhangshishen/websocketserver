@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"net"
 	"sync"
 )
@@ -10,7 +9,7 @@ import (
 var ws *Websocket
 
 const (
-	BUFSIZE = 4096 * 4
+	BUFSIZE = 1024
 )
 
 const (
@@ -26,8 +25,8 @@ type Connect struct {
 	group *Group
 	ws    *Websocket
 	id    string
-
-	ctx chan int
+	num   int
+	ctx   chan int
 	//write buffer and message buffer
 	wbuf      []byte
 	wbufIndex int
@@ -62,7 +61,7 @@ func (c *Connect) Write(m *Message) {
 	}
 }
 func echoHandler(caller *Connect, m *Message) int {
-	fmt.Println("...echo")
+	//fmt.Println("...echo")
 	r := make([]byte, 0)
 	r = append(r, m.head...)
 	r = append(r, m.data...)
@@ -73,7 +72,6 @@ func echoHandler(caller *Connect, m *Message) int {
 }
 
 func broadcastHandler(caller *Connect, m *Message) int {
-	fmt.Println("...echo")
 	r := make([]byte, 0)
 	r = append(r, m.head...)
 	r = append(r, m.data...)
