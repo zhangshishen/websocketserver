@@ -15,9 +15,12 @@ func upgradeHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
-	ws := getWs()
+	ws := getWs("Default")
+	g := ws.gs(r)
+	id := ws.is(r)
 
-	go ws.addConn(conn, "", "")
+	go ws.addConn(conn, g, id)
+
 }
 
 func computeKey(s string) string {
@@ -70,11 +73,17 @@ func upgrade(w http.ResponseWriter, r *http.Request) (*Connect, string) {
 	if err != nil {
 		return nil, "response failed"
 	}
+	//create default conn
 	conn := new(Connect)
-	conn.conn = c
+	conn.conn = c //native socket fd
 	conn.num = icrementID
 	icrementID++
 	conn.wbuf = make([]byte, BUFSIZE)
 	conn.mbuf = make([]byte, BUFSIZE)
+
+	conn.outQueue = make(chan *Message, 256)
+	conn.inQueue = make(chan *Message, 256)
+	conn.ctx = make(chan int)
+
 	return conn, ""
 }

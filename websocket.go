@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"./wlog"
 )
 
 const (
@@ -19,10 +21,10 @@ const (
 var keyGUID = []byte("258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
 
 type UpgradeHandler func(w http.ResponseWriter, r *http.Request)
+type groupSelector func(r *http.Request) string
+type idSelector func(r *http.Request) string
 
 //type broadcastHandler func(message []byte, group string) int
-type multicastHandler func(message []byte, multiGroup []string) int
-type unicastHandler func(message []byte, id string) int
 
 type Websocket struct {
 	mu             sync.Mutex
@@ -33,9 +35,9 @@ type Websocket struct {
 	group map[string]*Group
 	//queue
 
-	//callback
-	//broadcastHandler
-	unicastHandler
+	//selector
+	gs groupSelector
+	is idSelector
 }
 
 func (w *Websocket) removeConnect(c *Connect) {
@@ -46,50 +48,45 @@ func (w *Websocket) removeConnect(c *Connect) {
 
 }
 
+func defaultMsgSelector(r *http.Request) string {
+	return "Default"
+}
+
+func defaultIDSelector(r *http.Request) string {
+	return ""
+}
+
 func (w *Websocket) addConn(c *Connect, g string, id string) {
 	//todo
 	if g == "" {
 		g = "Default"
 	}
-	//fmt.Println("#connect: create success ")
+
 	//create map between group and conn
-	group := w.group[g]
-	if group == nil {
-		group = new(Group)
-		group.conn = make(map[*Connect]bool)
-	}
-	c.group = group
-	group.addConn(c)
+	w.addToGroup(c, g)
 	//create map between conn and ws
 	w.mu.Lock()
 	w.connMap[id] = c
 	w.mu.Unlock()
-	//init var
-
-	c.ctx = make(chan int)
+	c.ws = w
+	//init handler
 
 	c.mh = echoHandler
-	c.ws = w
-	outQueue := make(chan *Message, 256)
-	c.inQueue = make(chan *Message, 256)
+
 	//reader goroutine
-	go readRoutine(c, outQueue)
+	go readRoutine(c, c.outQueue)
 
 	for {
 
 		wmsg := <-c.inQueue
 		if wmsg == nil {
 			//close connect
-			return
+			continue
 		}
 
 		n, err := c.conn.Write(wmsg.data)
 
-		if err != nil { //passive close
-			close(c.ctx)
-			return
-		}
-		if wmsg.op == connClosed { //adjective close
+		if err != nil || wmsg.op == connClosed { //passive close or adjective close
 			c.conn.Close()
 			close(c.ctx)
 			return
@@ -110,7 +107,6 @@ func readRoutine(c *Connect, outQueue chan *Message) {
 
 	for {
 		n, err := c.conn.Read(c.wbuf)
-
 		if err != nil {
 			c.conn.Close()
 			close(bufc)
@@ -142,16 +138,76 @@ func pingPong(c *Connect, t time.Duration, context chan int) {
 }
 func (w *Websocket) addToGroup(c *Connect, group string) {
 	//todo
-}
+	g := w.group[group]
 
+	if g == nil {
+		g = new(Group)
+		g.conn = make(map[*Connect]bool)
+		w.mu.Lock()
+		w.group[group] = g
+		w.mu.Unlock()
+	}
+
+	g.addConn(c)
+
+}
+func (w *Websocket) removeFromGroupByPointer(c *Connect) {
+	//todo
+	g := c.group
+	if g == nil {
+		wlog.Out("group name %d not found\n", g.name)
+		return
+	}
+
+	ref := g.removeConn(c)
+
+	if ref == 0 {
+		w.mu.Lock()
+		delete(w.group, g.name)
+		w.mu.Unlock()
+	}
+
+}
 func (w *Websocket) removeFromGroup(c *Connect, group string) {
 	//todo
-}
+	g := w.group[group]
+	if g == nil {
+		wlog.Out("group name %d not found\n", group)
+		return
+	}
 
+	ref := g.removeConn(c)
+
+	if ref == 0 {
+		w.mu.Lock()
+		delete(w.group, g.name)
+		w.mu.Unlock()
+	}
+
+}
+func (w *Websocket) addGroupHandler(Group string, mh messageHandler) {
+
+}
+func (w *Websocket) addHandler(URL string, mh messageHandler) {
+
+}
 func (w *Websocket) listen(url string) {
 
 	//fmt.Println("listening ...")
+	if len(w.group) == 0 {
+		w.group = make(map[string]*Group)
+	}
+	if len(w.connMap) == 0 {
+		w.connMap = make(map[string]*Connect)
+	}
+	if url == "" || url == "/" {
+		addWs("Default", w)
+	} else {
+		addWs(url, w)
+	}
+
 	mux := http.DefaultServeMux
 	mux.HandleFunc("/", upgradeHandler)
 	log.Fatal(http.ListenAndServe(":8080", mux))
+
 }

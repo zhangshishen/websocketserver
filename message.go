@@ -32,6 +32,9 @@ type Message struct {
 	data       []byte
 }
 
+func (m *Message) setNoClose() {
+
+}
 func testBuf(buf []byte, bc chan []byte) ([]byte, bool) {
 
 	if len(buf) == 0 {
@@ -64,7 +67,7 @@ func fillMsg(bc chan []byte, mc chan<- *Message, c *Connect) {
 		op := buf[0] & 0xf
 		//rsv := buf[0] & 0x70 >> 4
 		m.head = append(m.head, buf[0])
-		if op == 0x8 {
+		if op&0x8 != 0 {
 			m.op = connClosed
 			//c.conn.Close()
 		}
@@ -154,16 +157,16 @@ func fillMsg(bc chan []byte, mc chan<- *Message, c *Connect) {
 			for i := 0; i < len(m.data); i++ {
 				m.data[i] ^= m.maskingKey[i%4]
 			}
-
-			c.mh(c, m)
+			fmt.Printf("handler length = %d\n", len(m.data))
 
 			if m.op == connClosed { //close tag
-				tmp := new(Message)
-				tmp.data = make([]byte, 2)
-				copy(tmp.data, m.data)
-				c.Write(tmp)
 
+				c.Write(m)
+
+				return
 			}
+
+			c.mh(c, m)
 			m = nil
 		}
 
