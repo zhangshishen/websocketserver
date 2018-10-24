@@ -116,24 +116,30 @@ func (w *Websocket) addConn(c *Connect, g string, id string, mh messageHandler) 
 
 	//reader goroutine
 	go readRoutine(c, c.outQueue)
-
+	//tbuf := make([]byte, 1024)
 	for {
 
 		wmsg := <-c.inQueue
 
 		if wmsg == nil {
+
 			w.releaseConn(c)
 			wlog.Out("connection closed")
 			return
+		} else {
+			tbuf := make([]byte, 0)
+			tbuf = append(tbuf, wmsg.head...)
+			tbuf = append(tbuf, wmsg.data...)
+
+			_, err := c.conn.Write(tbuf)
+
+			if err != nil || wmsg.op == connClosed { //passive close or adjective close
+				w.releaseConn(c)
+				wlog.Out("connection closed")
+				return
+			}
 		}
 
-		_, err := c.conn.Write(wmsg.data)
-
-		if err != nil || wmsg.op == connClosed { //passive close or adjective close
-			w.releaseConn(c)
-			wlog.Out("connection closed")
-			return
-		}
 		/*
 			if n != len(wmsg.data) {
 				fmt.Printf("fatal error write %d byte\n", n)

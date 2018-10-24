@@ -67,9 +67,6 @@ func (c *Connect) Ping() int {
 	return 0
 }
 func (c *Connect) Write(m *Message) {
-	if m != nil {
-		m.data = append(m.head, m.data...)
-	}
 
 	select {
 	case <-c.ctx:

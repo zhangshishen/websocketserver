@@ -43,9 +43,10 @@ func (g *Group) removeConn(c *Connect) int { //return the reference
 }
 
 func (g *Group) broadcast(m *Message) {
-	fmt.Printf("b message %s\n", m.data)
+
 	for k, v := range g.conn {
 		if v {
+			fmt.Printf("b message %s\n", m.data)
 			k.Write(m)
 		}
 	}
