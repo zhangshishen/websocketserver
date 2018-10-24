@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"net"
 	"sync"
 )
@@ -68,14 +67,17 @@ func (c *Connect) Ping() int {
 	return 0
 }
 func (c *Connect) Write(m *Message) {
-	m.data = append(m.head, m.data...)
+	if m != nil {
+		m.data = append(m.head, m.data...)
+	}
+
 	select {
 	case <-c.ctx:
 	case c.inQueue <- m:
 	}
 }
 func echoHandler(caller *Connect, m *Message) int {
-	fmt.Printf("...echo size = %d\n", len(m.data))
+	//fmt.Printf("...echo size = %d\n", len(m.data))
 	/*
 		r := make([]byte, 0)
 		r = append(r, m.head...)
@@ -88,7 +90,7 @@ func echoHandler(caller *Connect, m *Message) int {
 
 func broadcastHandler(caller *Connect, m *Message) int {
 
-	caller.group.broadCast(m)
+	caller.ws.broadcast(caller, m)
 
 	return 1
 }

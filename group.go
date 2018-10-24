@@ -1,14 +1,12 @@
 package main
 
 import (
-	"sync"
+	"fmt"
 
 	"./wlog"
 )
 
-type ctx <-chan int
 type Group struct {
-	mu   sync.Mutex
 	conn map[*Connect]bool
 	mh   messageHandler
 	ref  int
@@ -17,8 +15,6 @@ type Group struct {
 
 func (g *Group) addConn(c *Connect) {
 	//todo
-	g.mu.Lock()
-	defer g.mu.Unlock()
 
 	g.conn[c] = true
 	c.group = g
@@ -27,8 +23,7 @@ func (g *Group) addConn(c *Connect) {
 }
 func (g *Group) removeConn(c *Connect) int { //return the reference
 	//todo
-	g.mu.Lock()
-	defer g.mu.Unlock()
+
 	_, ok := g.conn[c]
 	if ok {
 		delete(g.conn, c)
@@ -46,10 +41,9 @@ func (g *Group) removeConn(c *Connect) int { //return the reference
 	return g.ref
 
 }
-func (g *Group) broadCast(m *Message) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
 
+func (g *Group) broadcast(m *Message) {
+	fmt.Printf("b message %s\n", m.data)
 	for k, v := range g.conn {
 		if v {
 			k.Write(m)

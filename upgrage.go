@@ -5,21 +5,24 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 func upgradeHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("start handshaking %d\n", icrementID)
+	//fmt.Printf("start handshaking %d\n", icrementID)
 	conn, err := upgrade(w, r)
 	if err != "" {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Println(err)
+		return
 	}
-
+	//todo get websocket with url
 	ws := getWs("Default")
+	//default selector,
 	g := ws.gs(r)
 	id := ws.is(r)
-
-	go ws.addConn(conn, g, id)
+	//define your handler
+	go ws.addConn(conn, g, id, broadcastHandler)
 
 }
 
@@ -41,7 +44,10 @@ func upgrade(w http.ResponseWriter, r *http.Request) (*Connect, string) {
 	if r.Header.Get("Upgrade") != "websocket" {
 		return nil, " upgrade not websocket"
 	}
-	if r.Header.Get("Connection") != "Upgrade" {
+	if !strings.Contains(r.Header.Get("Connection"), "Upgrade") {
+		for k, v := range r.Header {
+			fmt.Printf("%s :%s\n", k, v)
+		}
 		return nil, "connection not upgrade"
 	}
 
@@ -68,7 +74,7 @@ func upgrade(w http.ResponseWriter, r *http.Request) (*Connect, string) {
 	_, err = rwb.Write(p)
 	rwb.Flush()
 
-	fmt.Printf("%d handshake success\n", icrementID)
+	//fmt.Printf("%d handshake success\n", icrementID)
 
 	if err != nil {
 		return nil, "response failed"

@@ -119,7 +119,7 @@ func fillMsg(bc chan []byte, mc chan<- *Message, c *Connect) {
 					}
 				}
 			}
-			//fmt.Println("#msg:length ", binary.BigEndian.Uint64(t))
+
 			m.length += binary.BigEndian.Uint64(t)
 			m.head = append(m.head, t...)
 		} else {
@@ -140,9 +140,9 @@ func fillMsg(bc chan []byte, mc chan<- *Message, c *Connect) {
 			}
 		}
 		m.maskingKey = t
-		//fmt.Println("#msg: m.length = %d, buflen = %d,datalen = %d", m.length, len(buf), len(m.data))
+
 		for len(buf) < int(m.length)-len(m.data) {
-			//fmt.Println("fragment")
+
 			m.data = append(m.data, buf...)
 			buf = <-bc
 			if len(buf) == 0 {
@@ -157,7 +157,6 @@ func fillMsg(bc chan []byte, mc chan<- *Message, c *Connect) {
 			for i := 0; i < len(m.data); i++ {
 				m.data[i] ^= m.maskingKey[i%4]
 			}
-			fmt.Printf("handler length = %d\n", len(m.data))
 
 			if m.op == connClosed { //close tag
 
