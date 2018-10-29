@@ -46,7 +46,7 @@ func (g *Group) broadcast(m *Message) {
 
 	for k, v := range g.conn {
 		if v {
-			fmt.Printf("b message %s\n", m.data)
+			fmt.Printf(" send to %d broadcast\n", k.num)
 			k.Write(m)
 		}
 	}

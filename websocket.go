@@ -105,7 +105,7 @@ func (w *Websocket) addConn(c *Connect, g string, id string, mh messageHandler) 
 	}
 
 	//create map between group and conn
-	w.addToGroup(c, g)
+
 	//create map between conn and ws
 	w.addToMap(c, id)
 
@@ -113,7 +113,7 @@ func (w *Websocket) addConn(c *Connect, g string, id string, mh messageHandler) 
 	//init handler
 
 	c.mh = mh
-
+	w.addToGroup(c, g)
 	//reader goroutine
 	go readRoutine(c, c.outQueue)
 	//tbuf := make([]byte, 1024)
@@ -126,11 +126,12 @@ func (w *Websocket) addConn(c *Connect, g string, id string, mh messageHandler) 
 			w.releaseConn(c)
 			wlog.Out("connection closed")
 			return
+
 		} else {
 			tbuf := make([]byte, 0)
 			tbuf = append(tbuf, wmsg.head...)
 			tbuf = append(tbuf, wmsg.data...)
-
+			//fmt.Println("out message\n")
 			_, err := c.conn.Write(tbuf)
 
 			if err != nil || wmsg.op == connClosed { //passive close or adjective close
@@ -149,6 +150,7 @@ func (w *Websocket) addConn(c *Connect, g string, id string, mh messageHandler) 
 }
 
 func (w *Websocket) releaseConn(c *Connect) {
+	//fmt.Println("close conn\n")
 	c.conn.Close()
 	close(c.ctx)
 	//remove from group
@@ -165,7 +167,7 @@ func readRoutine(c *Connect, outQueue chan *Message) {
 
 	for {
 		n, err := c.conn.Read(c.wbuf)
-
+		fmt.Printf("%d receive package\n", c.num)
 		if err != nil {
 
 			c.conn.Close()

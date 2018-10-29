@@ -159,12 +159,12 @@ func fillMsg(bc chan []byte, mc chan<- *Message, c *Connect) {
 			}
 
 			if m.op == connClosed { //close tag
-
+				fmt.Printf("%d close connect\n", c.num)
 				c.Write(m)
 
 				return
 			}
-
+			fmt.Printf("%d broadcast\n", c.num)
 			c.mh(c, m)
 			m = nil
 		}
