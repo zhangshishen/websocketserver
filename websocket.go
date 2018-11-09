@@ -52,6 +52,9 @@ func (w *Websocket) removeConnect(c *Connect) {
 	//retrive ws map
 
 }
+func (w *Websocket) broadcastWithoutSelf(c *Connect, m *Message) {
+
+}
 
 func (w *Websocket) broadcast(c *Connect, m *Message) {
 	w.mu.RLock()

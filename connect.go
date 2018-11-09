@@ -84,7 +84,12 @@ func echoHandler(caller *Connect, m *Message) int {
 
 	return 1
 }
+func broadcastWithoutSelfHandler(caller *Connect, m *Message) int {
 
+	caller.ws.broadcastWithoutSelf(caller, m)
+
+	return 1
+}
 func broadcastHandler(caller *Connect, m *Message) int {
 
 	caller.ws.broadcast(caller, m)
