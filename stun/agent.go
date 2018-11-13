@@ -1,6 +1,7 @@
 package stun
 
 import (
+	"fmt"
 	"net"
 	"strconv"
 
@@ -26,45 +27,55 @@ type Agent struct {
 
 func (a *Agent) bind(domainName string, port int) int {
 	if a.conn != nil {
-		wlog.Out("bind failed, already has conn\n")
+		wlog.Out("[stun] bind failed, already has conn\n")
 		return -1
 	}
+	fmt.Println(domainName + ":" + strconv.Itoa(port))
 	conn, err := net.Dial("udp", domainName+":"+strconv.Itoa(port))
 	if err != nil {
 		wlog.Out("[stun] udp dail failed\n")
 		return -1
 	}
 	a.conn = conn
+	wlog.Out("[stun] bind success\n")
 	return 0
 
 }
 func (a *Agent) listen(callback attributeCallback) {
 	buf := make([]byte, 1024)
 
-	last := HEADERSIZE
-	for last > 0 {
-		l, err := a.conn.Read(buf[HEADERSIZE-last : HEADERSIZE])
-		if err != nil {
-			wlog.Out("[stun] read udp error\n")
-		}
-		last -= l
+	l, err := a.conn.Read(buf)
+	if err != nil {
+
+		wlog.Out("[stun] read udp error\n")
+		return
+	}
+	if l < HEADERSIZE {
+		wlog.Out("[stun] size too small")
+		return
 	}
 
 	msg := Message{}
 	msg.hcallback = callback
 
-	len := msg.parseMessageHeader(buf)
+	len := msg.parseMessageHeader(buf[0:HEADERSIZE])
 
-	last = len
-
-	for last > 0 {
-		l, err := a.conn.Read(buf[len-last : len])
-		if err != nil {
-			wlog.Out("[stun] read udp error\n")
-		}
-		last -= l
+	if (l - HEADERSIZE) != len {
+		wlog.Out("[stun] parse failed, length not match")
+		return
 	}
-	msg.parseMessageAttribute(buf)
+	/*
+		for last > 0 {
+			wlog.Out("[stun] start read")
+			l, err := a.conn.Read(buf[len-last : len])
+			if err != nil {
+				wlog.Out("[stun] read udp error\n")
+			}
+			wlog.Out("[stun] read size", l)
+			last -= l
+		}*/
+
+	msg.parseMessageAttribute(buf[HEADERSIZE : HEADERSIZE+len])
 
 }
 
@@ -75,13 +86,17 @@ func (a *Agent) request(method int, class int) int {
 		return -1
 	}
 	m := Message{}
+	m.attribute = make([]Attribute, 0)
 	m.make(method, class)
+
 	//m.addAttribute(Attribute{})
 	buf := m.generateBuffer(nil)
+	fmt.Printf("message is %v\n", buf)
 
 	l, err := a.conn.Write(buf)
 	if l < len(buf) || err != nil {
 		wlog.Out("[stun] send msg failed!\n")
 	}
+	wlog.Out("[stun] request success,send size %d\n", l)
 	return 0
 }

@@ -53,13 +53,13 @@ func (a *Attribute) print() {
 
 func (m *Message) generateBuffer(reuse []byte) []byte {
 
-	var length uint16 = 20
+	var length uint16 = HEADERSIZE
 	var res []byte
 
 	for _, v := range m.attribute {
 		length += v.length
 	}
-	m.mlength = length
+	m.mlength = length - HEADERSIZE
 
 	if reuse == nil || len(reuse) < (int)(length) {
 		res = make([]byte, length)
@@ -71,10 +71,10 @@ func (m *Message) generateBuffer(reuse []byte) []byte {
 	binary.BigEndian.PutUint16(res[2:], m.mlength)
 	binary.BigEndian.PutUint32(res[4:], (uint32)(m.magicCookie))
 	binary.BigEndian.PutUint32(res[8:], (uint32)(m.transactionID[0]))
-	binary.BigEndian.PutUint32(res[12:], (uint32)(m.transactionID[0]))
-	binary.BigEndian.PutUint32(res[16:], (uint32)(m.transactionID[0]))
+	binary.BigEndian.PutUint32(res[12:], (uint32)(m.transactionID[1]))
+	binary.BigEndian.PutUint32(res[16:], (uint32)(m.transactionID[2]))
 
-	attr := res[20:]
+	attr := res[HEADERSIZE:]
 
 	for _, v := range m.attribute {
 		binary.BigEndian.PutUint16(attr[0:], v.htype)
@@ -109,17 +109,20 @@ func (m *Message) addAttribute(a Attribute) {
 func makeType(method int, class int) uint16 {
 
 	var res uint16 = 0
-	res &= (uint16)((class & 1) << 4)
-	res &= (uint16)((class & 2) << 8)
-	res &= (uint16)((method & 0xf))
-	res &= (uint16)((method & 0x70) << 1)
-	res &= (uint16)((method & 0xf80) << 2)
+	res |= (uint16)((class & 1) << 4)
+	res |= (uint16)((class & 2) << 8)
+	res |= (uint16)((method & 0xf))
+	res |= (uint16)((method & 0x70) << 1)
+	res |= (uint16)((method & 0xf80) << 2)
 
 	return res
 }
 
 //parse header and return length
 func (m *Message) parseMessageHeader(buf []byte) int {
+	if m.attribute == nil {
+		m.attribute = make([]Attribute, 0)
+	}
 	if len(buf) != 20 {
 		wlog.Out("[stun] parse failed, header too short\n")
 		return -1
@@ -130,8 +133,8 @@ func (m *Message) parseMessageHeader(buf []byte) int {
 		return -1
 	}
 	m.mtype = 0
-	m.mtype &= ((uint16)(0x3F & buf[0])) << 8
-	m.mtype &= ((uint16)(0xFF & buf[1]))
+	m.mtype |= ((uint16)(0x3F & buf[0])) << 8
+	m.mtype |= ((uint16)(0xFF & buf[1]))
 
 	m.mlength = binary.BigEndian.Uint16(buf[2:4])
 	m.magicCookie = (int)(binary.BigEndian.Uint32(buf[4:8]))
@@ -146,7 +149,7 @@ func (m *Message) parseMessageHeader(buf []byte) int {
 	m.transactionID[2] = (int)(binary.BigEndian.Uint32(buf[16:20]))
 
 	//m.mcallback(m)
-
+	wlog.Out("[stun] parse header success length is ", m.mlength)
 	return int(m.mlength)
 
 }
@@ -154,7 +157,7 @@ func (m *Message) parseMessageHeader(buf []byte) int {
 func (m *Message) parseMessageAttribute(buf []byte) int {
 	//m.mtype =
 	for {
-
+		//wlog.Out("[stun] Attribute buffer length", len(buf))
 		if len(buf) <= 4 {
 			return 0
 		}
@@ -175,28 +178,9 @@ func (m *Message) parseMessageAttribute(buf []byte) int {
 			return -1
 		}
 
-		h.value = buf[4 : 4+h.length]
+		h.value = buf[:h.length]
 		m.hcallback(&h)
 
-		buf = buf[4+h.length:]
+		buf = buf[h.length:]
 	}
 }
-
-/*
-func parseAttribute(buf []byte) (Header,int) {
-	h :=Header{}
-	if len(buf)<1 {
-		return nil,0
-	}
-	h.htype = (buf[0]&0xffff0000)>>16
-	h.length = (buf[0]&0xffff)
-
-
-	return h,0
-
-}
-*/
-/*
-func (h *Header) makeMapAddress(){
-	h.htype =
-}*/
