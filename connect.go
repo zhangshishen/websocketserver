@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"sync"
 )
@@ -96,9 +97,27 @@ func broadcastHandler(caller *Connect, m *Message) int {
 
 	return 1
 }
+
 func (c *Connect) Close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.conn.Close()
 	c.ws.removeConnect(c)
+}
+
+func outputHander(caller *Connect, m *Message) int {
+
+	out := make([]byte, 0)
+	for i := 0; i < len(m.data); i++ {
+		if m.data[i] == '\\' && m.data[i+1] == 'n' {
+			out = append(out, '\n')
+			i++
+		} else if m.data[i] == '\\' && m.data[i+1] == 'r' {
+			i++
+		} else {
+			out = append(out, m.data[i])
+		}
+	}
+	fmt.Println(string(out))
+	return 1
 }

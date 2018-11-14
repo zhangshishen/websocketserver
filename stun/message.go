@@ -24,6 +24,7 @@ const (
 const (
 	MAPPED_ADDRESS     = 1
 	XOR_MAPPED_ADDRESS = 0x20
+	MAGICCOOKIE        = 0x2112a442
 )
 
 type attributeCallback func(h *Attribute)

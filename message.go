@@ -164,7 +164,7 @@ func fillMsg(bc chan []byte, mc chan<- *Message, c *Connect) {
 
 				return
 			}
-			fmt.Printf("%d broadcast\n", c.num)
+
 			c.mh(c, m)
 			m = nil
 		}

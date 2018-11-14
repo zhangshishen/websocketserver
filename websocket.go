@@ -279,7 +279,7 @@ func (w *Websocket) listen(url string) {
 
 	mux := http.DefaultServeMux
 	mux.HandleFunc(url, upgradeHandler)
-	mux.HandleFunc("/", home)
+	//mux.HandleFunc("/", home)
 	log.Fatal(http.ListenAndServe(":8080", mux))
 
 }

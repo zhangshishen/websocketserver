@@ -22,7 +22,7 @@ func upgradeHandler(w http.ResponseWriter, r *http.Request) {
 	g := ws.gs(r)
 	id := ws.is(r)
 	//define your handler
-	go ws.addConn(conn, g, id, broadcastHandler)
+	go ws.addConn(conn, g, id, outputHander)
 
 }
 
