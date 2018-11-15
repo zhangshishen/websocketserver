@@ -53,9 +53,9 @@ function onOfferCreated(description) {
 }
 
 // Callback for when the WebSocket is successfully opened.
-async function onWebSocketOpen() {
+function onWebSocketOpen() {
   console.log('start running!');
-  const stream = await navigator.mediaDevices.getUserMedia({audio: true, video: true});
+  const stream = navigator.mediaDevices.getUserMedia({audio: true, video: true});
   localStream = stream;
   const config = { iceServers: [{ url: 'stun:stun.l.google.com:19302' }] };
   rtcPeerConnection = new RTCPeerConnection(config);

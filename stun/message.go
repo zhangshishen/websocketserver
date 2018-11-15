@@ -27,7 +27,7 @@ const (
 	MAGICCOOKIE        = 0x2112a442
 )
 
-type attributeCallback func(h *Attribute)
+type attributeCallback func(h *Attribute, m *Message)
 type messageCallback func(m *Message)
 
 type Attribute struct {
@@ -180,7 +180,7 @@ func (m *Message) parseMessageAttribute(buf []byte) int {
 		}
 
 		h.value = buf[:h.length]
-		m.hcallback(&h)
+		m.hcallback(&h, m)
 
 		buf = buf[h.length:]
 	}

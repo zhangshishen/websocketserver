@@ -6,7 +6,7 @@ import (
 	"net"
 )
 
-func callback(h *Attribute) {
+func callback(h *Attribute, m *Message) {
 	h.print()
 	if len(h.value) != 8 {
 		fmt.Printf("[stun] xor addvice not correct\n")
@@ -28,7 +28,7 @@ func callback(h *Attribute) {
 
 func Stun_test() {
 	agent := Agent{}
-	agent.bind("stun.l.google.com", 19302)
+	agent.bind("stun.l.google.com", 19302, nil)
 	agent.request(binding, request)
 	agent.listen(callback)
 }

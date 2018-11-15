@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"./stun"
 	"github.com/gorilla/websocket"
 	//"github.com/gortc/stun"
 )
@@ -122,13 +123,13 @@ func main() {
 	// http.HandleFunc("/", home)
 	// log.Fatal(http.ListenAndServe(*addr, nil))
 
-	w := Websocket{}
+	//w := Websocket{}
 
-	w.init()
+	//w.init()
 
-	w.listen("/")
+	//w.listen("/")
 
-	//stun.Stun_test()
+	stun.Stun_test()
 }
 
 /*

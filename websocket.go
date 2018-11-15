@@ -170,7 +170,7 @@ func readRoutine(c *Connect, outQueue chan *Message) {
 
 	for {
 		n, err := c.conn.Read(c.wbuf)
-		fmt.Printf("%d receive package\n", c.num)
+		fmt.Printf("%d receive package,length = %d\n", c.num, n)
 		if err != nil {
 
 			c.conn.Close()

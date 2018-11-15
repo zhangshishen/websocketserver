@@ -20,18 +20,26 @@ const (
 type Agent struct {
 	agentType int
 	method    int
-	conn      net.Conn
+	conn      *net.UDPConn
 	port      int
 	address   int
 }
 
-func (a *Agent) bind(domainName string, port int) int {
+func (a *Agent) bind(domainName string, port int, laddr *net.UDPAddr) int {
 	if a.conn != nil {
 		wlog.Out("[stun] bind failed, already has conn\n")
 		return -1
 	}
 	fmt.Println(domainName + ":" + strconv.Itoa(port))
-	conn, err := net.Dial("udp", domainName+":"+strconv.Itoa(port))
+	addrs, err := net.ResolveIPAddr("ip", domainName)
+	if err != nil {
+		wlog.Out("[stun] dns resolve failed")
+		return -1
+	}
+	var raddr net.UDPAddr
+	raddr.IP = net.ParseIP(addrs.String())
+	raddr.Port = port
+	conn, err := net.DialUDP("udp", laddr, &raddr)
 	if err != nil {
 		wlog.Out("[stun] udp dail failed\n")
 		return -1
@@ -41,6 +49,7 @@ func (a *Agent) bind(domainName string, port int) int {
 	return 0
 
 }
+
 func (a *Agent) listen(callback attributeCallback) {
 	buf := make([]byte, 1024)
 
